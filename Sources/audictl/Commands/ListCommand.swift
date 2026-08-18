@@ -22,8 +22,18 @@ struct ListCommand: ParsableCommand {
     var multi = false
 
     func run() throws {
+        let showMembers = aggregate || multi
         try rendered(globals, human: { (dto: DeviceListDTO, _) in
-            formatTable(dto.devices.map(deviceRow), header: deviceHeader)
+            let table = formatTableLines(dto.devices.map(deviceRow), header: deviceHeader)
+            guard showMembers else { return table.joined(separator: "\n") }
+            var lines = [table[0]]
+            for (i, device) in dto.devices.enumerated() {
+                lines.append(table[i + 1])
+                for sub in device.subDevices ?? [] {
+                    lines.append(subDeviceLine(sub, clockUID: device.clockDeviceUID, indent: "      "))
+                }
+            }
+            return lines.joined(separator: "\n")
         }) {
             var filter: DeviceFilter = []
             if input { filter.insert(.input) }

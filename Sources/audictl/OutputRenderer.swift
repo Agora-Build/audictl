@@ -43,7 +43,8 @@ func formatRate(_ hz: Double) -> String {
         : String(format: "%g Hz", hz)
 }
 
-func formatTable(_ rows: [[String]], header: [String]) -> String {
+/// Aligned table lines; index 0 is the header, then one line per row.
+func formatTableLines(_ rows: [[String]], header: [String]) -> [String] {
     let all = [header] + rows
     var widths = [Int](repeating: 0, count: header.count)
     for row in all {
@@ -56,7 +57,17 @@ func formatTable(_ rows: [[String]], header: [String]) -> String {
             .map { i, cell in cell.padding(toLength: widths[i], withPad: " ", startingAt: 0) }
             .joined(separator: "  ")
             .trimmingCharacters(in: .whitespaces)
-    }.joined(separator: "\n")
+    }
+}
+
+func formatTable(_ rows: [[String]], header: [String]) -> String {
+    formatTableLines(rows, header: header).joined(separator: "\n")
+}
+
+func subDeviceLine(_ sub: SubDeviceDTO, clockUID: String?, indent: String) -> String {
+    let clock = sub.uid == clockUID ? " [clock]" : ""
+    let drift = sub.driftCompensation ? " drift" : ""
+    return "\(indent)└ \(sub.name ?? sub.uid)\(clock)\(drift)"
 }
 
 func deviceRow(_ d: DeviceInfoDTO) -> [String] {
@@ -106,6 +117,12 @@ func describeDevice(_ d: DeviceInfoDTO) -> String {
     if !d.isAlive { flags.append("not alive") }
     if d.isRunning { flags.append("running") }
     if !flags.isEmpty { lines.append("  flags:        " + flags.joined(separator: ", ")) }
+    if let subs = d.subDevices, !subs.isEmpty {
+        lines.append("  contains:")
+        for sub in subs {
+            lines.append(subDeviceLine(sub, clockUID: d.clockDeviceUID, indent: "    "))
+        }
+    }
     return lines.joined(separator: "\n")
 }
 

@@ -28,12 +28,16 @@ public struct DeviceInfoDTO: Codable, Equatable {
     public let isMultiOutput: Bool
     public let isAlive: Bool
     public let isRunning: Bool
+    // Aggregates only: membership, so `list` answers "what's inside" too.
+    public let subDevices: [SubDeviceDTO]?
+    public let clockDeviceUID: String?
 
     public init(id: UInt32, uid: String, name: String, manufacturer: String?,
                 transport: String, input: Direction, output: Direction,
                 sampleRate: Double?, availableSampleRates: [Double]?,
                 isDefaultInput: Bool, isDefaultOutput: Bool, isDefaultSystem: Bool,
-                isAggregate: Bool, isMultiOutput: Bool, isAlive: Bool, isRunning: Bool) {
+                isAggregate: Bool, isMultiOutput: Bool, isAlive: Bool, isRunning: Bool,
+                subDevices: [SubDeviceDTO]? = nil, clockDeviceUID: String? = nil) {
         self.id = id
         self.uid = uid
         self.name = name
@@ -50,6 +54,8 @@ public struct DeviceInfoDTO: Codable, Equatable {
         self.isMultiOutput = isMultiOutput
         self.isAlive = isAlive
         self.isRunning = isRunning
+        self.subDevices = subDevices
+        self.clockDeviceUID = clockDeviceUID
     }
 
     public var ref: DeviceRef { DeviceRef(id: id, uid: uid, name: name) }

@@ -31,7 +31,9 @@ public struct AggregateManager {
             isPrivate: comp.isPrivate,
             clockDeviceUID: comp.clockUID,
             subDevices: comp.subDevices.map {
-                SubDeviceDTO(uid: $0.uid, name: refsByUID[$0.uid]?.name, driftCompensation: $0.drift)
+                SubDeviceDTO(uid: $0.uid,
+                             name: refsByUID[$0.uid]?.name ?? $0.name,
+                             driftCompensation: $0.drift)
             }
         )
     }

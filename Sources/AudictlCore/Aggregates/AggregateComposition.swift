@@ -10,9 +10,14 @@ public struct AggregateComposition {
     public struct SubDevice: Equatable {
         public var uid: String
         public var drift: Bool
-        public init(uid: String, drift: Bool) {
+        // The HAL stores the friendly name in the composition, so it survives
+        // the hardware being unplugged (this is how Audio MIDI Setup labels
+        // offline sub-devices). Never written back on create.
+        public var name: String?
+        public init(uid: String, drift: Bool, name: String? = nil) {
             self.uid = uid
             self.drift = drift
+            self.name = name
         }
     }
 
@@ -65,7 +70,9 @@ public struct AggregateComposition {
         let list = dict[kAudioAggregateDeviceSubDeviceListKey] as? [[String: Any]] ?? []
         return list.compactMap { sub in
             guard let uid = sub[kAudioSubDeviceUIDKey] as? String else { return nil }
-            return SubDevice(uid: uid, drift: (sub[kAudioSubDeviceDriftCompensationKey] as? Int ?? 0) == 1)
+            return SubDevice(uid: uid,
+                             drift: (sub[kAudioSubDeviceDriftCompensationKey] as? Int ?? 0) == 1,
+                             name: sub[kAudioSubDeviceNameKey] as? String)
         }
     }
 }

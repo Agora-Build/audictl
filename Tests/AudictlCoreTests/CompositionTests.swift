@@ -116,6 +116,33 @@ import Testing
         }
     }
 
+    @Test func infoExposesMembershipForAggregates() throws {
+        let (hal, _, dto) = try makeAggregate()
+        let info = try DeviceManager(hal: hal).info(for: dto.id)
+        #expect(info.subDevices?.map(\.uid) == ["dev-a", "dev-b"])
+        #expect(info.clockDeviceUID == "dev-a")
+        #expect(try DeviceManager(hal: hal).info(for: 41).subDevices == nil)
+    }
+
+    @Test func offlineSubDeviceFallsBackToStoredName() throws {
+        let (hal, manager, dto) = try makeAggregate()
+        // Simulate what the HAL does for unplugged hardware: the composition
+        // carries a "name" for a uid that no live device matches.
+        let key = MockHALClient.Key(dto.id, AudioObjectPropertyAddress(kAudioAggregateDevicePropertyComposition))
+        var raw = hal.cfProperties[key] as? [String: Any] ?? [:]
+        var list = raw[kAudioAggregateDeviceSubDeviceListKey] as? [[String: Any]] ?? []
+        list.append([kAudioSubDeviceUIDKey: "gone-uid",
+                     kAudioSubDeviceNameKey: "External Headphones",
+                     kAudioSubDeviceDriftCompensationKey: 0])
+        raw[kAudioAggregateDeviceSubDeviceListKey] = list
+        hal.cfProperties[key] = raw
+
+        let shown = try manager.show(dto.id)
+        #expect(shown.subDevices.last?.name == "External Headphones")
+        // Live devices still prefer their current name over the stored one.
+        #expect(shown.subDevices.first?.name == "Device A")
+    }
+
     @Test func editPreservesUnknownCompositionKeys() throws {
         let (hal, manager, dto) = try makeAggregate()
         let key = MockHALClient.Key(dto.id, AudioObjectPropertyAddress(kAudioAggregateDevicePropertyComposition))

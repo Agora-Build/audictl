@@ -113,6 +113,20 @@ absent rather than null):
 }
 ```
 
+Aggregate and multi-output devices additionally carry their membership
+(added in 0.1.1, additive):
+
+```json
+{
+  "subDevices": [{"uid": "BlackHole2ch_UID", "name": "BlackHole 2ch", "driftCompensation": true}],
+  "clockDeviceUID": "BlackHole2ch_UID"
+}
+```
+
+Sub-device `name` prefers the live device name and falls back to the name
+stored in the composition, so unplugged hardware keeps its friendly label
+(matching Audio MIDI Setup).
+
 `transport` values: `builtin`, `pci`, `usb`, `firewire`, `bluetooth`,
 `bluetoothLE`, `hdmi`, `displayport`, `airplay`, `avb`, `thunderbolt`,
 `aggregate`, `autoaggregate`, `virtual`, `continuityCaptureWired`,

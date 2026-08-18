@@ -76,6 +76,18 @@ public struct DeviceManager {
         let isAgg = isAggregate(id)
         let stacked = (comp?[kAudioAggregateDeviceIsStackedKey] as? Int ?? 0) == 1
 
+        var subDevices: [SubDeviceDTO]? = nil
+        var clockUID: String? = nil
+        if let comp {
+            let parsed = AggregateComposition.parse(comp)
+            let namesByUID = Dictionary((try? allRefs())?.map { ($0.uid, $0.name) } ?? [],
+                                        uniquingKeysWith: { a, _ in a })
+            subDevices = parsed.subDevices.map {
+                SubDeviceDTO(uid: $0.uid, name: namesByUID[$0.uid] ?? $0.name, driftCompensation: $0.drift)
+            }
+            clockUID = parsed.clockUID
+        }
+
         let volume = VolumeControl(hal: hal)
         let inputVolume = inputChannels > 0 ? try? volume.getVolume(id, scope: kAudioDevicePropertyScopeInput).volume : nil
         let outputVolume = outputChannels > 0 ? try? volume.getVolume(id, scope: kAudioDevicePropertyScopeOutput).volume : nil
@@ -98,7 +110,9 @@ public struct DeviceManager {
             isAggregate: isAgg,
             isMultiOutput: isAgg && stacked,
             isAlive: alive == 1,
-            isRunning: running != 0
+            isRunning: running != 0,
+            subDevices: subDevices,
+            clockDeviceUID: clockUID
         )
     }
 

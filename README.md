@@ -33,6 +33,10 @@ cp .build/release/audictl /usr/local/bin/
 
 ```sh
 audictl list                          # table of all devices
+audictl list --aggregate              # aggregates with members inline:
+                                      #   58  Aggregate Device  18  18 ...
+                                      #         └ BlackHole 2ch [clock]
+                                      #         └ BlackHole 16ch drift
 audictl list --input                  # only devices with input channels
 audictl info scarlett                 # fuzzy name matching everywhere
 audictl default get output
