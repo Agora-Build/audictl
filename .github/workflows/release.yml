@@ -1,0 +1,158 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+# Only one release workflow runs at a time. Prevents a parallel release from
+# overwriting npm's `dist-tags.latest` when two tags are pushed close together.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build (${{ matrix.artifact }})
+    runs-on: macos-15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: arm64
+            artifact: darwin-aarch64
+          - arch: x86_64
+            artifact: darwin-x86_64
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set version from tag
+        run: |
+          VERSION="${{ github.ref_name }}"
+          VERSION="${VERSION#v}"
+          perl -pi -e "s/version: \"[^\"]*\"/version: \"${VERSION}\"/" Sources/audictl/Audictl.swift
+
+      - name: Build
+        run: swift build -c release --arch ${{ matrix.arch }}
+
+      - name: Run tests
+        if: matrix.arch == 'arm64'
+        run: |
+          swift test
+          AUDICTL_INTEGRATION=1 swift test --filter IntegrationTests
+
+      - name: Package binary
+        run: |
+          VERSION="${{ github.ref_name }}"
+          BIN_PATH="$(swift build -c release --arch ${{ matrix.arch }} --show-bin-path)"
+          ARCHIVE="audictl-${VERSION}-${{ matrix.artifact }}.tar.gz"
+
+          strip "${BIN_PATH}/audictl" 2>/dev/null || true
+          tar -czf "$ARCHIVE" -C "$BIN_PATH" audictl
+
+          echo "ARCHIVE=$ARCHIVE" >> $GITHUB_ENV
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: ${{ env.ARCHIVE }}
+
+  release:
+    name: Create GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist/
+          merge-multiple: true
+
+      - name: List artifacts
+        run: ls -la dist/
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: dist/audictl-*
+
+  npm-publish:
+    name: Publish to npm
+    needs: release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Set version from tag
+        run: |
+          VERSION="${{ github.ref_name }}"
+          VERSION="${VERSION#v}"
+          cd npm
+          # Update version in package.json
+          node -e "
+            const pkg = require('./package.json');
+            pkg.version = '${VERSION}';
+            require('fs').writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
+          "
+          echo "Publishing @agora-build/audictl@${VERSION}"
+
+      - name: Publish to npm
+        run: cd npm && npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  r2-mirror:
+    name: Mirror to Cloudflare R2
+    needs: release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist/
+          merge-multiple: true
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Upload binaries + install script to R2
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+        run: |
+          npm i -g wrangler
+          VERSION="${GITHUB_REF_NAME}"
+          # Shared releases bucket for all Agora-Build CLIs. dl.agora.build
+          # is the custom domain attached to it; the per-project key prefix
+          # (`audictl/…`) keeps projects separate.
+          BUCKET="agora-build-releases"
+
+          # Upload each platform tarball
+          for f in dist/audictl-*.tar.gz; do
+            KEY="audictl/releases/${VERSION}/$(basename $f)"
+            echo "Uploading $KEY"
+            wrangler r2 object put "$BUCKET/$KEY" --file="$f" --remote
+          done
+
+          # Update the 'latest' version marker (plain text, no 'v' prefix)
+          echo -n "${VERSION#v}" | wrangler r2 object put "$BUCKET/audictl/releases/latest" \
+            --pipe --content-type text/plain --remote
+
+          # Upload the install script
+          wrangler r2 object put "$BUCKET/audictl/install.sh" \
+            --file=scripts/install.sh --content-type text/plain --remote
