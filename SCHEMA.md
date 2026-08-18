@@ -95,7 +95,7 @@ absent rather than null):
 - `rate` → `{ "device": Ref, "sampleRate": 48000, "availableSampleRates": [44100, 48000] }`
 - `aggregate show/create/add/remove/set-clock/drift`, `multi create` →
   `{ "id": 155, "uid": "...", "name": "...", "isMultiOutput": false, "isPrivate": false, "clockDeviceUID": "...", "subDevices": [{"uid": "...", "name": "...", "driftCompensation": true}] }`
-- `aggregate list` → `{ "aggregates": [Aggregate] }`
+- `aggregate show` with no device → `{ "aggregates": [Aggregate] }`
 - `aggregate destroy`, `multi destroy` → `{ "uid": "...", "existed": true }`
 
 `DeviceInfo`:

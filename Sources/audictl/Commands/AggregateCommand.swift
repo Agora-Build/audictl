@@ -37,7 +37,7 @@ struct AggregateCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "aggregate",
         abstract: "Create, inspect, edit, and destroy aggregate devices.",
-        subcommands: [List.self, Show.self, Create.self, Destroy.self,
+        subcommands: [Show.self, Create.self, Destroy.self,
                       Add.self, Remove.self, SetClock.self, Drift.self],
         defaultSubcommand: Show.self
     )
@@ -64,20 +64,6 @@ struct AggregateCommand: ParsableCommand {
                 : dto.aggregates.map(describeAggregate).joined(separator: "\n\n")
         }) {
             (AggregateListDTO(aggregates: try AggregateManager().listAggregates()), nil)
-        }
-    }
-
-    // Deprecated alias of `aggregate show`; hidden from help, removed in 0.2.
-    struct List: ParsableCommand {
-        static let configuration = CommandConfiguration(
-            commandName: "list",
-            abstract: "Deprecated: use `audictl aggregate show`.",
-            shouldDisplay: false
-        )
-        @OptionGroup var globals: GlobalOptions
-
-        func run() throws {
-            try AggregateCommand.renderAllCompositions(globals)
         }
     }
 

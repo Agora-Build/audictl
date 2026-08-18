@@ -21,7 +21,7 @@ import Testing
     }
 
     @Test func aggregateCommandsParse() {
-        #expect(parses(["aggregate", "list"]))
+        #expect(parses(["aggregate"]))  // defaults to show-all
         #expect(parses(["aggregate", "show"]))
         #expect(parses(["aggregate", "show", "Rig", "--by-name"]))
         #expect(parses(["aggregate", "create", "--name", "Rig", "--devices", "a,b",
