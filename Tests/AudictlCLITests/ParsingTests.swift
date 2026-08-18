@@ -22,6 +22,8 @@ import Testing
 
     @Test func aggregateCommandsParse() {
         #expect(parses(["aggregate", "list"]))
+        #expect(parses(["aggregate", "show"]))
+        #expect(parses(["aggregate", "show", "Rig", "--by-name"]))
         #expect(parses(["aggregate", "create", "--name", "Rig", "--devices", "a,b",
                         "--clock", "a", "--drift", "all", "--private", "--uid", "custom"]))
         #expect(parses(["aggregate", "destroy", "Rig", "--if-exists"]))

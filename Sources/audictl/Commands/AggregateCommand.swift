@@ -56,6 +56,16 @@ struct AggregateCommand: ParsableCommand {
         }
     }
 
+    static func renderAllCompositions(_ globals: GlobalOptions) throws {
+        try rendered(globals, human: { (dto: AggregateListDTO, _) in
+            dto.aggregates.isEmpty
+                ? "no aggregate devices"
+                : dto.aggregates.map(describeAggregate).joined(separator: "\n\n")
+        }) {
+            (AggregateListDTO(aggregates: try AggregateManager().listAggregates()), nil)
+        }
+    }
+
     struct List: ParsableCommand {
         static let configuration = CommandConfiguration(
             commandName: "list",
@@ -64,27 +74,30 @@ struct AggregateCommand: ParsableCommand {
         @OptionGroup var globals: GlobalOptions
 
         func run() throws {
-            try rendered(globals, human: { (dto: AggregateListDTO, _) in
-                dto.aggregates.isEmpty
-                    ? "no aggregate devices"
-                    : dto.aggregates.map(describeAggregate).joined(separator: "\n\n")
-            }) {
-                (AggregateListDTO(aggregates: try AggregateManager().listAggregates()), nil)
-            }
+            try AggregateCommand.renderAllCompositions(globals)
         }
     }
 
     struct Show: ParsableCommand {
         static let configuration = CommandConfiguration(
             commandName: "show",
-            abstract: "Dump one aggregate's composition."
+            abstract: "Dump aggregate compositions — one device's, or all when omitted."
         )
-        @OptionGroup var ref: AggregateRef
+
+        @OptionGroup var globals: GlobalOptions
+        @OptionGroup var selector: SelectorOptions
+
+        @Argument(help: "Aggregate device UID, numeric ID, or (partial) name; omit to show all.")
+        var aggregate: String?
 
         func run() throws {
-            try rendered(ref.globals, human: { (dto: AggregateDTO, _) in describeAggregate(dto) }) {
-                let (_, _, dto) = try ref.resolve()
-                return (dto, nil)
+            guard let aggregate else {
+                return try AggregateCommand.renderAllCompositions(globals)
+            }
+            try rendered(globals, human: { (dto: AggregateDTO, _) in describeAggregate(dto) }) {
+                let manager = AggregateManager()
+                let ref = try DeviceSelector(manager: DeviceManager()).resolve(aggregate, mode: selector.mode)
+                return (try manager.show(ref.id), nil)
             }
         }
     }
