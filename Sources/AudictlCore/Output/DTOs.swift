@@ -57,8 +57,6 @@ public struct DeviceInfoDTO: Codable, Equatable {
         self.subDevices = subDevices
         self.clockDeviceUID = clockDeviceUID
     }
-
-    public var ref: DeviceRef { DeviceRef(id: id, uid: uid, name: name) }
 }
 
 public struct DeviceListDTO: Codable, Equatable {

@@ -60,6 +60,27 @@ final class MockHALClient: HALClient {
         cfProperties[Key(id, AudioObjectPropertyAddress(selector, scope: scope))] = value
     }
 
+    /// Stubs kAudioDevicePropertyStreamConfiguration: one stream per entry,
+    /// each with that many channels.
+    func stubChannels(_ id: AudioObjectID, scope: AudioObjectPropertyScope, buffers: [UInt32]) {
+        let count = max(buffers.count, 1)
+        let size = AudioBufferList.sizeInBytes(maximumBuffers: count)
+        let raw = UnsafeMutableRawPointer.allocate(byteCount: size,
+                                                   alignment: MemoryLayout<AudioBufferList>.alignment)
+        defer { raw.deallocate() }
+        raw.initializeMemory(as: UInt8.self, repeating: 0, count: size)
+        let abl = raw.assumingMemoryBound(to: AudioBufferList.self)
+        abl.pointee.mNumberBuffers = UInt32(buffers.count)
+        let list = UnsafeMutableAudioBufferListPointer(abl)
+        for (i, channels) in buffers.enumerated() {
+            list[i].mNumberChannels = channels
+            list[i].mDataByteSize = 0
+            list[i].mData = nil
+        }
+        let key = Key(id, AudioObjectPropertyAddress(kAudioDevicePropertyStreamConfiguration, scope: scope))
+        properties[key] = Array(UnsafeRawBufferPointer(start: raw, count: size))
+    }
+
     /// Registers a device with the common identity properties.
     func addDevice(id: AudioObjectID, uid: String, name: String) {
         stubCF(id, kAudioDevicePropertyDeviceUID, value: uid)

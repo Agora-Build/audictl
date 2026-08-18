@@ -49,6 +49,7 @@ audictl rate get minifuse
 audictl rate set minifuse 96k         # validates against supported rates,
                                       # waits for the device to settle
 
+audictl aggregate show "Studio Rig"   # composition: sub-devices, clock, drift
 audictl aggregate create --name "Studio Rig" --devices "minifuse,BlackHole 2ch" --clock minifuse
 audictl aggregate add "Studio Rig" "BlackHole 16ch" --drift
 audictl aggregate set-clock "Studio Rig" "BlackHole 2ch"
@@ -62,6 +63,17 @@ audictl multi create --name "Everywhere" --devices "speakers,office hdmi"
 Devices are addressed by UID, numeric ID, exact name, or unique name
 substring — see `SCHEMA.md` for resolution order and the `--by-uid` /
 `--by-id` / `--by-name` overrides.
+
+### Aggregates and multi-output devices
+
+`list` always prints one row per device (the Audio MIDI Setup sidebar);
+`aggregate show` / `aggregate list` print what's *inside* (the "Use"
+checkboxes). A multi-output device is a stacked aggregate — same CoreAudio
+class, outputs mirrored instead of channels concatenated — so every
+`aggregate` command (`show`, `add`, `remove`, `set-clock`, `drift`) works on
+it; Audio MIDI Setup's "Primary Device" is the same field audictl shows as
+`[clock]`. Sub-devices keep their friendly names even while the hardware is
+unplugged, matching what the GUI displays.
 
 ## For agents and scripts
 

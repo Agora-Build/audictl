@@ -60,10 +60,6 @@ func formatTableLines(_ rows: [[String]], header: [String]) -> [String] {
     }
 }
 
-func formatTable(_ rows: [[String]], header: [String]) -> String {
-    formatTableLines(rows, header: header).joined(separator: "\n")
-}
-
 func subDeviceLine(_ sub: SubDeviceDTO, clockUID: String?, indent: String) -> String {
     let clock = sub.uid == clockUID ? " [clock]" : ""
     let drift = sub.driftCompensation ? " drift" : ""

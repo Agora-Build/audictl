@@ -69,10 +69,8 @@ extension AudictlError {
 public enum JSONValue: Encodable {
     case string(String)
     case number(Double)
-    case bool(Bool)
     case array([JSONValue])
     case object([String: JSONValue])
-    case null
 
     public func encode(to encoder: Encoder) throws {
         var container = encoder.singleValueContainer()
@@ -84,10 +82,8 @@ public enum JSONValue: Encodable {
             } else {
                 try container.encode(n)
             }
-        case .bool(let b): try container.encode(b)
         case .array(let a): try container.encode(a)
         case .object(let o): try container.encode(o)
-        case .null: try container.encodeNil()
         }
     }
 }
