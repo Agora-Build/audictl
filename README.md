@@ -49,7 +49,8 @@ audictl rate get minifuse
 audictl rate set minifuse 96k         # validates against supported rates,
                                       # waits for the device to settle
 
-audictl aggregate show "Studio Rig"   # composition: sub-devices, clock, drift
+audictl aggregate                     # compositions of all aggregates (alias: aggregate show)
+audictl aggregate show "Studio Rig"   # one composition: sub-devices, clock, drift
 audictl aggregate create --name "Studio Rig" --devices "minifuse,BlackHole 2ch" --clock minifuse
 audictl aggregate add "Studio Rig" "BlackHole 16ch" --drift
 audictl aggregate set-clock "Studio Rig" "BlackHole 2ch"
@@ -67,8 +68,9 @@ substring — see `SCHEMA.md` for resolution order and the `--by-uid` /
 ### Aggregates and multi-output devices
 
 `list` always prints one row per device (the Audio MIDI Setup sidebar);
-`aggregate show` / `aggregate list` print what's *inside* (the "Use"
-checkboxes). A multi-output device is a stacked aggregate — same CoreAudio
+`aggregate show` prints what's *inside* (the "Use" checkboxes) — bare
+`audictl aggregate` does the same for all of them. A multi-output device is a
+stacked aggregate — same CoreAudio
 class, outputs mirrored instead of channels concatenated — so every
 `aggregate` command (`show`, `add`, `remove`, `set-clock`, `drift`) works on
 it; Audio MIDI Setup's "Primary Device" is the same field audictl shows as

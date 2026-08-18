@@ -38,7 +38,8 @@ struct AggregateCommand: ParsableCommand {
         commandName: "aggregate",
         abstract: "Create, inspect, edit, and destroy aggregate devices.",
         subcommands: [List.self, Show.self, Create.self, Destroy.self,
-                      Add.self, Remove.self, SetClock.self, Drift.self]
+                      Add.self, Remove.self, SetClock.self, Drift.self],
+        defaultSubcommand: Show.self
     )
 
     struct AggregateRef: ParsableArguments {
@@ -66,10 +67,12 @@ struct AggregateCommand: ParsableCommand {
         }
     }
 
+    // Deprecated alias of `aggregate show`; hidden from help, removed in 0.2.
     struct List: ParsableCommand {
         static let configuration = CommandConfiguration(
             commandName: "list",
-            abstract: "List aggregate and multi-output devices."
+            abstract: "Deprecated: use `audictl aggregate show`.",
+            shouldDisplay: false
         )
         @OptionGroup var globals: GlobalOptions
 
