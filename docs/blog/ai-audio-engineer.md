@@ -30,7 +30,7 @@ installer (your agent can fetch it, but the installer asks for your
 password — that click is yours):
 
 ```sh
-npm install -g @agora-build/audictl
+npm install -g @agora-build/audictl @agora-build/dialf
 brew install blackhole-2ch blackhole-16ch     # or download from existential.audio
 ```
 
