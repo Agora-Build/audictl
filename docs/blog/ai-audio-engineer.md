@@ -1,53 +1,83 @@
 # Let Your AI Agent Be Your Audio Engineer
 
-*Voice-testing rigs on macOS, wired by prompt — audictl + BlackHole + DialF.*
+*Recording calls, podcasts, and voice-AI tests on your Mac — wired by a
+prompt, no audio engineering degree required.*
 
-If you build or test voice things — AI voice agents, calling apps, meeting
-bots — you eventually need to **record both what goes in and what comes out**
-of your Mac's audio. And that's where the pain starts: Audio MIDI Setup,
-checkboxes, aggregate devices, drift correction, "why is my recording at the
-wrong sample rate", and twenty minutes of clicking you'll redo next week on
-another machine.
+Everyone who records anything on a Mac hits the same wall eventually:
 
-The GUI can't be scripted, and your coding agent can't click checkboxes.
+- You interview a guest over Zoom and want **your voice and theirs on
+  separate tracks** for editing — but your recording only has one side.
+- You're on AirPods and want to **capture a call exactly as you heard it**.
+- You're a developer testing a **voice AI agent** and need to feed it audio
+  and record its replies, reproducibly.
 
-[`audictl`](https://github.com/Agora-Build/audictl) fixes that. It's a CLI
-that does everything Audio MIDI Setup does for audio devices — list, inspect,
-defaults, volume, **sample rates**, **aggregate and multi-output devices with
-clock and drift control** — with stable JSON output, typed errors, and
-idempotent commands. Which means the whole audio rig below is something you
-can paste into a terminal, put in a Makefile, or hand to Claude/Codex as a
-prompt: *"set up the audio environment for a voice eval."*
+The Mac can do all of this natively — no paid apps — but the setup lives in
+a utility called Audio MIDI Setup: aggregate devices, multi-output devices,
+clock sources, drift correction, sample rates. Checkboxes upon checkboxes.
+It drives people crazy, and next month you get to re-remember all of it.
+
+Here's the new way: **describe what you want to an AI coding agent, and let
+it do the wiring.**
+
+## The zero-learning path
+
+If you have [Claude Code](https://claude.com/claude-code), Codex, or any
+coding agent that can run commands, you don't need to understand anything
+below. Paste one of these:
+
+> Read https://github.com/Agora-Build/audictl/blob/main/docs/blog/ai-audio-engineer.md
+> and set up my Mac so my next call is recorded with my mic and the other
+> side on separate tracks. I'm on AirPods. Undo everything when I say done.
+
+> Read that same page and set up Case 2 for testing my voice agent at
+> 48 kHz, then run the DialF eval.
+
+The agent installs the tools, wires the virtual devices, verifies the setup,
+and — importantly — **cleans up afterwards**. Everything it runs is safe to
+repeat (commands are no-ops when already done), nothing touches your files,
+and every step is a one-liner to undo.
+
+The rest of this post is what the agent (or you, if you're curious) actually
+does. Humans welcome; it's shorter than the checkbox maze.
+
+## The kit
+
+Three free pieces, all installable by your agent:
 
 ```sh
 npm install -g @agora-build/audictl
 # or: curl -fsSL https://dl.agora.build/audictl/install.sh | bash
 ```
 
-The other two pieces of the kit:
-
+- [**audictl**](https://github.com/Agora-Build/audictl) — Audio MIDI Setup
+  as a command line: devices, defaults, sample rates, aggregate and
+  multi-output devices with clock and drift control. JSON output, meaningful
+  exit codes, idempotent — built so AI agents can drive it safely.
 - [**BlackHole**](https://existential.audio/blackhole/) — a virtual audio
-  cable. Anything played into it can be captured from it. Install both the
-  2ch and 16ch variants; two cables means input and output never collide.
+  cable. Anything played into it can be recorded from it. Install the 2ch
+  and 16ch variants; two cables means input and output never collide.
 - [**DialF**](https://www.npmjs.com/package/@agora-build/dialf)
-  (`@agora-build/dialf`) — plays prompt audio, captures replies, and records
-  tx/rx/mix on one clock. Built for phone-rig evals; works just as well fully
-  virtual.
+  (`@agora-build/dialf`) — plays prompt audio, captures replies, records
+  tx/rx/mix on one clock. Built for voice-agent evals.
 
 ---
 
-## Case 1 — Record both sides of a call (Bluetooth headset)
+## Case 1 — Record both sides of a call or interview
 
-You're on AirPods (or any BT headset with a mic) and want one recording that
-contains **what you said and what you heard**, in sync. No hardware mixer,
-no holding a phone to a speaker.
+*For podcasters, journalists, anyone taking calls on a headset.* One
+recording, in sync: channel 1 is your voice, channels 2–3 are what you heard
+(your guest, the other side, the meeting). Split them afterwards and edit
+each side separately.
 
-Two virtual devices do it:
+**Prompt to paste:** *"Set up my Mac to record my next call: my AirPods mic
+and everything I hear, as separate channels in one file."*
+
+What that builds:
 
 ```
                         ┌──────────────────────────────┐
   the app's audio ────▶ │ Multi-Output "Hear+Tap"      │
-  (Zoom, agent, …)      │  ├─▶ AirPods       (you hear)│
+  (Zoom, Meet, agent…)  │  ├─▶ AirPods       (you hear)│
                         │  └─▶ BlackHole 2ch (the tap) │
                         └──────────────────────────────┘
 
@@ -56,8 +86,8 @@ Two virtual devices do it:
   the tap ──▶ BlackHole 2ch ──┘     (mic + playback, one clock)
 ```
 
-Wire it (fuzzy names are fine — audictl resolves them, and errors with
-candidates if ambiguous):
+The commands (fuzzy names are fine — audictl resolves them, and lists
+candidates if a name is ambiguous):
 
 ```sh
 # Output side: play to your ears AND into the tap
@@ -73,26 +103,19 @@ audictl aggregate create --name "Rec In" --devices "AirPods,BlackHole 2ch" \
 audictl rate set "BlackHole 2ch" 48k
 ```
 
-Record from the aggregate — channel 1 is your mic, channels 2–3 are what you
-heard:
+Record from "Rec In" with anything — QuickTime and GarageBand can select it
+as the input device, or from the terminal:
 
 ```sh
 sox -t coreaudio "Rec In" call.wav          # everything, in sync
-sox call.wav mic.wav   remix 1              # split afterwards if you want
-sox call.wav heard.wav remix 2,3
+sox call.wav mic.wav   remix 1              # your voice
+sox call.wav heard.wav remix 2,3            # what you heard
 ```
 
-Or point DialF at it (`~/.config/dialf/config.yaml`) and let it manage the
-recording files:
+(Or point DialF at it: `capture_device: "Rec In"` with `record_dir` and
+`mix_recording: true` in `~/.config/dialf/config.yaml`.)
 
-```yaml
-audio:
-  capture_device: "Rec In"
-  record_dir: ~/recordings
-  mix_recording: true
-```
-
-Tear it down when you're done — teardown is idempotent, safe to run twice:
+Done recording? Teardown is idempotent — safe to run twice:
 
 ```sh
 audictl default set output "AirPods"
@@ -104,10 +127,13 @@ audictl multi destroy "Hear+Tap" --if-exists
 
 ## Case 2 — Eval a voice AI agent, no phone required
 
-You have a voice agent running on (or reachable from) your Mac — a browser
-tab, a softphone, a local process — and you want deterministic evals: play a
-scripted prompt, capture the agent's reply, measure latency. No cellular in
+*For developers.* Your voice agent runs on (or is reachable from) your Mac —
+a browser tab, a softphone, a local process. You want deterministic evals:
+play a scripted prompt, capture the reply, measure latency. No cellular in
 the loop, so results are reproducible.
+
+**Prompt to paste:** *"Set up the Case 2 rig from this page for my voice
+agent, sample rate 44.1k, and run the DialF eval job."*
 
 Two cables, one per direction:
 
@@ -121,9 +147,8 @@ Two cables, one per direction:
 
 ### Preflight, agent-runnable
 
-This is the part your coding agent can own. Every command is idempotent
-(`changed:false` on re-run) and exit codes are meaningful, so the script is
-safe to run before every eval:
+Every command is idempotent (`changed:false` on re-run) and exit codes are
+meaningful, so this runs unconditionally before every eval:
 
 ```sh
 #!/usr/bin/env bash
@@ -184,63 +209,69 @@ dialf run jobs/audio-inject-record.yaml    # audio-only: no --device, no phone
 
 Afterward, cross-correlate tx against rx: the gap between tx-end and rx-onset
 is the agent's response latency, on a clean digital path. (For the real
-earpiece/codec/acoustic path, keep the phone + sound-card rig; this setup
+earpiece/codec/acoustic path, keep a phone + sound-card rig; this setup
 measures the agent itself.)
 
 ### Want to listen in while the eval runs?
 
-The agent's output is going into a virtual cable — silent by default. Tap it
-the same way as Case 1:
+The agent's output goes into a virtual cable — silent by default. Tap it the
+same way as Case 1:
 
 ```sh
 audictl multi create --name "Eval Monitor" --devices "BlackHole 16ch,MacBook Pro Speakers"
 ```
 
-…and have the agent output to "Eval Monitor" instead: DialF still captures
-from BlackHole 16ch, and your speakers get a copy.
+…and have the agent output to "Eval Monitor": DialF still captures from
+BlackHole 16ch, and your speakers get a copy.
 
 ---
 
 ## Notes for coding agents
 
-If you are Claude, Codex, or any other coding agent reading this: audictl was
-designed for you. The contract, in brief — full spec in
+If you are Claude, Codex, or another coding agent reading this because a
+human pasted it to you: audictl was designed for you. The contract, in
+brief — full spec in
 [SCHEMA.md](https://github.com/Agora-Build/audictl/blob/main/SCHEMA.md):
 
 - Add `--json` to every command. You get
   `{"ok":true,"schemaVersion":1,"changed":…,"data":{…}}` on stdout — success
   and error envelopes both, so capture one stream only.
 - **Mutations are idempotent** and return the resulting state. Re-running a
-  satisfied command is `ok:true, changed:false`, exit 0 — build setup scripts
-  that run unconditionally; don't pre-check.
+  satisfied command is `ok:true, changed:false`, exit 0 — run setup scripts
+  unconditionally; don't pre-check.
 - **Exit codes**: 2 device not found, 3 ambiguous selector, 4 unsupported
-  (includes invalid sample rate, with the valid rates in
+  (includes invalid sample rate, with valid rates in
   `error.details.available`), 5 CoreAudio error, 6 timeout.
 - On `AMBIGUOUS_DEVICE`, the error's `details.candidates` lists id/uid/name —
   retry with the UID. **Store UIDs, never numeric ids** (ids change; notably
   aggregates get a new id after every composition edit).
 - `audictl list --json` is your discovery step; `audictl aggregate --json`
   shows every aggregate's members, clock, and drift flags.
-- Clean up with `destroy --if-exists` / `remove --if-absent-ok` so teardown
-  never fails on a half-torn-down rig.
+- Clean up with `destroy --if-exists` / `remove --if-absent-ok`, and restore
+  the user's default devices when the session ends — leave the machine as
+  you found it.
 - Rule of thumb for rigs: **BlackHole as the clock source, drift correction
   on Bluetooth/USB sub-devices**; set every device in a rig to one sample
   rate before recording.
+- Substitute the user's real device names: `audictl list` first, then build.
 
 ## More scenarios
 
-The two cases compose. Some obvious extensions:
+The two cases compose — tell your agent what you want and it can adapt:
 
-- **Meeting recorder** — Case 1 with Zoom/Meet as the app; ch1 is you,
-  ch2–3 are everyone else.
-- **Agent-vs-agent** — two agents talking: one's output cable is the other's
-  input cable, DialF taps both. 2ch and 16ch are independent cables; install
-  more BlackHole variants for more parallel paths.
+- **Podcast with a remote guest** — Case 1 with Zoom/Meet: you on one track,
+  guest on the others, edit each side independently.
+- **Streaming / screen recording with app audio** — tap any app's sound into
+  OBS or QuickTime while still hearing it (Case 1's output half alone).
+- **React / commentary videos** — record the video's audio and your mic
+  commentary as separate channels, no desk mixer.
+- **Agent-vs-agent** — two AI agents talking: one's output cable is the
+  other's input cable, DialF taps both.
 - **CI voice tests** — a Mac mini runner where the preflight script *is* the
   fixture; `--private` aggregates keep the runner's device list clean.
 - **Whole-house audio** — `multi create` with every AirPlay/HDMI output;
   drift correction keeps rooms in sync.
 
-Everything here is a prompt away: *"read
-https://github.com/Agora-Build/audictl and set up Case 2 for a 48 kHz
-agent."* Your audio engineer is in.
+Whatever the variation, the ask is one sentence: *"read
+https://github.com/Agora-Build/audictl and wire my Mac to record ___."*
+Your audio engineer is in.
