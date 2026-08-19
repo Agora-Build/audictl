@@ -23,7 +23,31 @@ it do the wiring.**
 
 If you have [Claude Code](https://claude.com/claude-code), Codex, or any
 coding agent that can run commands, you don't need to understand anything
-below. Paste one of these:
+below. The workflow is four steps, **in this order** — it matters:
+
+**1. Install the tools.** audictl is one command; BlackHole is a normal Mac
+installer (your agent can fetch it, but the installer asks for your
+password — that click is yours):
+
+```sh
+npm install -g @agora-build/audictl
+brew install blackhole-2ch blackhole-16ch     # or download from existential.audio
+```
+
+**2. Plug everything in.** Pair the AirPods, connect the headset, plug in
+the interface — *before* asking for anything. An agent can only wire
+devices it can see; hardware that isn't connected doesn't exist to
+CoreAudio.
+
+**3. Have the agent take inventory.** Paste:
+
+> Run `audictl list` and tell me what audio devices I have.
+
+Now the agent knows your world by real names — "Hai's AirPods Pro", not a
+guess — and everything it builds will reference devices that actually exist.
+
+**4. Say what you want, in plain English.** From here the agent handles all
+of it — wiring, verifying, recording, and cleaning up afterwards:
 
 > Read https://github.com/Agora-Build/audictl/blob/main/docs/blog/ai-audio-engineer.md
 > and set up my Mac so my next call is recorded with my mic and the other
@@ -32,30 +56,24 @@ below. Paste one of these:
 > Read that same page and set up Case 2 for testing my voice agent at
 > 48 kHz, then run the DialF eval.
 
-The agent installs the tools, wires the virtual devices, verifies the setup,
-and — importantly — **cleans up afterwards**. Everything it runs is safe to
-repeat (commands are no-ops when already done), nothing touches your files,
-and every step is a one-liner to undo.
+Everything the agent runs is safe to repeat (commands are no-ops when
+already done), nothing touches your files, and every step is a one-liner to
+undo.
 
-The rest of this post is what the agent (or you, if you're curious) actually
-does. Humans welcome; it's shorter than the checkbox maze.
+The rest of this post is what the agent (or you, if you're curious)
+actually does. Humans welcome; it's shorter than the checkbox maze.
 
 ## The kit
 
-Three free pieces, all installable by your agent:
-
-```sh
-npm install -g @agora-build/audictl
-# or: curl -fsSL https://dl.agora.build/audictl/install.sh | bash
-```
+Three free pieces:
 
 - [**audictl**](https://github.com/Agora-Build/audictl) — Audio MIDI Setup
   as a command line: devices, defaults, sample rates, aggregate and
   multi-output devices with clock and drift control. JSON output, meaningful
   exit codes, idempotent — built so AI agents can drive it safely.
 - [**BlackHole**](https://existential.audio/blackhole/) — a virtual audio
-  cable. Anything played into it can be recorded from it. Install the 2ch
-  and 16ch variants; two cables means input and output never collide.
+  cable. Anything played into it can be recorded from it. The 2ch and 16ch
+  variants are two independent cables, so input and output never collide.
 - [**DialF**](https://www.npmjs.com/package/@agora-build/dialf)
   (`@agora-build/dialf`) — plays prompt audio, captures replies, records
   tx/rx/mix on one clock. Built for voice-agent evals.
