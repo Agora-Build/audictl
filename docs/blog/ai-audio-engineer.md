@@ -20,8 +20,8 @@ can paste into a terminal, put in a Makefile, or hand to Claude/Codex as a
 prompt: *"set up the audio environment for a voice eval."*
 
 ```sh
-curl -fsSL https://dl.agora.build/audictl/install.sh | bash
-# or: npm install -g @agora-build/audictl
+npm install -g @agora-build/audictl
+# or: curl -fsSL https://dl.agora.build/audictl/install.sh | bash
 ```
 
 The other two pieces of the kit:
