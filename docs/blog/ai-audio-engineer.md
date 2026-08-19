@@ -21,7 +21,7 @@ it do the wiring.**
 
 ## The zero-learning path
 
-If you have [Claude Code](https://claude.com/claude-code), Codex, or any
+If you have Claude Code, Codex, or any
 coding agent that can run commands, you don't need to understand anything
 below. The workflow is four steps, **in this order** — it matters:
 
