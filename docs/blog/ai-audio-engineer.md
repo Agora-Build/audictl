@@ -74,16 +74,16 @@ and everything I hear, as separate channels in one file."*
 
 What that builds:
 
-```
-                        ┌──────────────────────────────┐
-  the app's audio ────▶ │ Multi-Output "Hear+Tap"      │
-  (Zoom, Meet, agent…)  │  ├─▶ AirPods       (you hear)│
-                        │  └─▶ BlackHole 2ch (the tap) │
-                        └──────────────────────────────┘
+```mermaid
+flowchart LR
+    app["app audio<br>(Zoom, Meet, agent…)"] --> hear["Multi-Output<br>Hear+Tap"]
+    hear --> pods["AirPods<br>(you hear it)"]
+    hear --> tap["BlackHole 2ch<br>(the tap)"]
 
-  you speak ──▶ AirPods mic ──┐
-                              ├─▶ Aggregate "Rec In" ──▶ recorder
-  the tap ──▶ BlackHole 2ch ──┘     (mic + playback, one clock)
+    you(("you speak")) --> mic["AirPods mic"]
+    mic --> rec["Aggregate: Rec In<br>(mic + playback, one clock)"]
+    tap --> rec
+    rec --> file["recorder<br>ch1 = your voice<br>ch2–3 = what you heard"]
 ```
 
 The commands (fuzzy names are fine — audictl resolves them, and lists
@@ -137,12 +137,12 @@ agent, sample rate 44.1k, and run the DialF eval job."*
 
 Two cables, one per direction:
 
-```
-  DialF plays prompt ──▶ BlackHole 2ch  ──▶ agent's microphone
-  agent speaks       ──▶ BlackHole 16ch ──▶ DialF captures (rx)
-
-  DialF records tx (what it played), rx (what the agent said),
-  and a mix — all stamped on one clock.
+```mermaid
+flowchart LR
+    dialf["DialF<br>records tx / rx / mix<br>on one clock"] -- "prompt (tx)" --> bh2["BlackHole 2ch"]
+    bh2 --> agent["voice agent<br>(browser tab, softphone, process)"]
+    agent -- "reply" --> bh16["BlackHole 16ch"]
+    bh16 -- "capture (rx)" --> dialf
 ```
 
 ### Preflight, agent-runnable
