@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Install audictl — manage macOS audio devices from the command line.
+# Install audictl — manage macOS and Linux audio devices from the command line.
 #
 # Quick install (works in regions where GitHub is not available):
 #   curl -fsSL https://dl.agora.build/audictl/install.sh | bash
@@ -28,7 +28,8 @@ detect_platform() {
 
   case "$os" in
     darwin) os="darwin" ;;
-    *)      die "audictl drives CoreAudio and only runs on macOS (got: $os)" ;;
+    linux)  os="linux" ;;
+    *)      die "Unsupported operating system: $os (supported: macOS, Linux)" ;;
   esac
 
   case "$arch" in

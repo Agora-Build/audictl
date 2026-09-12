@@ -1,9 +1,10 @@
 # audictl
 
-A scriptable replacement for the audio-device half of macOS **Audio MIDI
-Setup** — built for humans at a terminal and for AI agents driving it as a
-tool. Everything the GUI does for audio devices, as composable commands with
-stable JSON output:
+A scriptable audio-device control tool for macOS and Linux, built for humans
+at a terminal and for AI agents driving it as a tool. Commands are composable
+and return stable JSON when requested.
+
+On macOS, audictl replaces the audio-device half of **Audio MIDI Setup**:
 
 - list / inspect devices, switch default input/output/system device
 - volume and mute, per-device and per-channel
@@ -12,7 +13,13 @@ stable JSON output:
   pick the clock device, toggle per-sub-device drift compensation
 - multi-output devices with Audio-MIDI-Setup-style drift defaults
 
-Requires macOS 13+. No dependencies beyond the system CoreAudio framework.
+On Linux, audictl manages PipeWire devices and routing, discovers ALSA virtual
+drivers even while they are hidden from PipeWire, installs `snd_aloop`, and
+creates persistent multi-output sinks.
+
+macOS requires macOS 13+. Linux requires PipeWire, `pipewire-pulse`,
+WirePlumber, and systemd user services. Native PulseAudio is detected and
+reported as unsupported for virtual-device management.
 
 ## Install
 
@@ -22,11 +29,18 @@ curl -fsSL https://dl.agora.build/audictl/install.sh | bash
 npm install -g @agora-build/audictl
 ```
 
-Or build from source:
+Or build from source on macOS:
 
 ```sh
 swift build -c release
 cp .build/release/audictl /usr/local/bin/
+```
+
+On Linux:
+
+```sh
+cargo build --release --manifest-path linux/Cargo.toml
+cp linux/target/release/audictl ~/.local/bin/
 ```
 
 ## Usage
@@ -77,6 +91,56 @@ it; Audio MIDI Setup's "Primary Device" is the same field audictl shows as
 `[clock]`. Sub-devices keep their friendly names even while the hardware is
 unplugged, matching what the GUI displays.
 
+On Linux, `multi create` presents the same interface but creates a persistent
+PipeWire combined sink. PipeWire performs the mirroring, resampling, and clock
+domain handling; an ALSA aggregate PCM is neither created nor required.
+
+### Linux virtual audio
+
+`list` shows endpoints currently exposed by PipeWire. `virtual list` reads
+ALSA as well, so it also shows virtual cards hidden from PipeWire:
+
+```sh
+audictl virtual list
+audictl virtual install                         # default: Audictl Audio Bridge
+audictl virtual install --name "Browser Bridge"
+audictl virtual show AudictlBridge
+audictl virtual hide AudictlBridge
+```
+
+If `snd_aloop` is already installed, `virtual install` reports the existing
+card and changes nothing. Otherwise Arch-derived and Ubuntu systems are
+configured automatically. NixOS receives the exact `configuration.nix`
+snippet it needs; audictl never edits generated NixOS system files.
+
+The default card has ALSA ID `AudictlBridge`. When shown, applications see the
+generic endpoints `Audictl-Audio-Bridge-Input` and
+`Audictl-Audio-Bridge-Output`. Hiding removes the card's managed PipeWire
+endpoints but leaves its ALSA PCMs available to direct ALSA applications.
+
+To hear output and capture the same signal through the bridge:
+
+```sh
+audictl multi create \
+  --name "Speakers + Audio Bridge" \
+  --devices "Built-in Audio,Audictl-Audio-Bridge-Output"
+audictl default set output "Speakers + Audio Bridge"
+```
+
+WirePlumber is PipeWire's session manager, not a competing audio pipeline.
+`pipewire-pulse` lets applications such as Chromium use these PipeWire
+endpoints through the PulseAudio API.
+
+### Platform command support
+
+| Command family | macOS | Linux |
+| --- | --- | --- |
+| `list`, `info`, `default` | CoreAudio | PipeWire |
+| `multi create/destroy` | CoreAudio multi-output | PipeWire combined sink |
+| `virtual` | - | ALSA + PipeWire |
+| `volume`, `mute`, `rate` | CoreAudio | Planned |
+| `aggregate` | CoreAudio | Not needed; use PipeWire routing |
+
 ## For agents and scripts
 
 Add `--json` to any command for a stable envelope on stdout:
@@ -94,7 +158,7 @@ The contract (`SCHEMA.md`):
 - Machine-readable errors with typed codes and structured details — an
   `AMBIGUOUS_DEVICE` error lists the candidates so a retry can pin a UID.
 - Exit codes distinguish not-found (2), ambiguous (3), unsupported (4),
-  CoreAudio errors (5), timeouts (6).
+  backend errors (5/6), and timeouts (6).
 - Device **UIDs are durable**; numeric ids are session-scoped. Store UIDs.
 
 `--quiet` suppresses output entirely (exit code only); `--timeout <s>` bounds
@@ -105,6 +169,7 @@ the wait for asynchronous device operations (creation, rate changes).
 ```sh
 swift test                                             # unit + CLI parsing (mocked HAL)
 AUDICTL_INTEGRATION=1 swift test --filter IntegrationTests   # real CoreAudio
+cargo test --manifest-path linux/Cargo.toml            # Linux backend
 ```
 
 Integration tests build their aggregates as *private* devices (visible only to
@@ -119,6 +184,7 @@ the test process), so they never pollute the machine's device list.
 
 ## Release
 
-Push a `v*` tag. CI builds arm64 + x86_64 binaries, runs the test suites,
-creates a GitHub Release, publishes `@agora-build/audictl` to npm, and mirrors
-the tarballs plus `install.sh` to `dl.agora.build/audictl/`.
+Push a `v*` tag. CI builds macOS and static Linux arm64 + x86_64 binaries,
+runs the test suites, creates a GitHub Release, publishes
+`@agora-build/audictl` to npm, and mirrors the tarballs plus `install.sh` to
+`dl.agora.build/audictl/`.

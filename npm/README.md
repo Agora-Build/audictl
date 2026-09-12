@@ -1,7 +1,6 @@
 # @agora-build/audictl
 
-Manage macOS audio devices from the command line — a scriptable, agent-friendly
-replacement for the audio-device half of Audio MIDI Setup.
+Manage macOS and Linux audio devices from a scriptable, agent-friendly CLI.
 
 ```sh
 npm install -g @agora-build/audictl
@@ -9,7 +8,7 @@ audictl list
 ```
 
 The postinstall step downloads the prebuilt binary for your platform from
-[GitHub Releases](https://github.com/Agora-Build/audictl/releases). macOS only.
+[GitHub Releases](https://github.com/Agora-Build/audictl/releases).
 
 Alternative install without npm:
 

@@ -21,12 +21,14 @@ function getPlatformKey() {
   const map = {
     "darwin-x64": "darwin-x86_64",
     "darwin-arm64": "darwin-aarch64",
+    "linux-x64": "linux-x86_64",
+    "linux-arm64": "linux-aarch64",
   };
 
   const key = `${platform}-${arch}`;
   if (!map[key]) {
     console.error(`Unsupported platform: ${key}`);
-    console.error("audictl drives CoreAudio and only runs on macOS (darwin-x64, darwin-arm64).");
+    console.error("Supported platforms: macOS and Linux on x64 or arm64.");
     process.exit(1);
   }
   return map[key];

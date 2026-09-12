@@ -61,9 +61,9 @@ Error:
 | 1 | `INTERNAL` | unexpected failure |
 | 2 | `DEVICE_NOT_FOUND` | `details.query` |
 | 3 | `AMBIGUOUS_DEVICE` | `details.query`, `details.candidates` (retry with a UID) |
-| 4 | `UNSUPPORTED_OPERATION`, `NOT_AN_AGGREGATE`, `INVALID_SAMPLE_RATE`, `SUBDEVICE_NOT_IN_AGGREGATE` | operation impossible for this device; `INVALID_SAMPLE_RATE` carries `details.requested` + `details.available` |
-| 5 | `HAL_ERROR` | CoreAudio failure; `details.osStatus`, `details.fourcc`, `details.operation` |
-| 6 | `TIMEOUT` | async device operation didn't settle within `--timeout` |
+| 4 | `UNSUPPORTED_OPERATION`, `REQUIRES_DECLARATIVE_CONFIG`, `NOT_AN_AGGREGATE`, `INVALID_SAMPLE_RATE`, `SUBDEVICE_NOT_IN_AGGREGATE` | operation impossible on this platform; declarative configuration errors carry `details.snippet` |
+| 5 | `HAL_ERROR`, `MISSING_DEPENDENCY` | CoreAudio failure, or a required Linux command is unavailable |
+| 6 | `TIMEOUT`, `BACKEND_ERROR` | an asynchronous operation timed out, or a Linux backend command failed |
 | 64 | — | usage error (bad arguments; ArgumentParser prints to stderr) |
 
 ## Device addressing
@@ -97,6 +97,29 @@ absent rather than null):
   `{ "id": 155, "uid": "...", "name": "...", "isMultiOutput": false, "isPrivate": false, "clockDeviceUID": "...", "subDevices": [{"uid": "...", "name": "...", "driftCompensation": true}] }`
 - `aggregate show` with no device → `{ "aggregates": [Aggregate] }`
 - `aggregate destroy`, `multi destroy` → `{ "uid": "...", "existed": true }`
+- `virtual list` → `{ "devices": [VirtualDevice] }`
+- `virtual install/show/hide` → `{ "device": VirtualDevice, "adoptedExistingDriver": true }`
+
+`VirtualDevice` is Linux-only. It describes the ALSA card even when no
+corresponding endpoint is visible to PipeWire:
+
+```json
+{
+  "id": "AudictlBridge",
+  "index": 0,
+  "name": "Audictl Audio Bridge",
+  "driver": "snd_aloop",
+  "alsaPlayback": "plughw:AudictlBridge,0",
+  "alsaPipewireSide": "plughw:AudictlBridge,1",
+  "pipewireVisibility": "exposed",
+  "inputEndpoint": "Audictl-Audio-Bridge-Input",
+  "outputEndpoint": "Audictl-Audio-Bridge-Output"
+}
+```
+
+`pipewireVisibility` is `hidden`, `exposed`, or `partial`. `partial` indicates
+that only one direction is present and should be repaired by `virtual show`
+or removed by `virtual hide`.
 
 `DeviceInfo`:
 
@@ -126,6 +149,9 @@ Aggregate and multi-output devices additionally carry their membership
 Sub-device `name` prefers the live device name and falls back to the name
 stored in the composition, so unplugged hardware keeps its friendly label
 (matching Audio MIDI Setup).
+
+On Linux, the PipeWire node name is the durable `uid`; the numeric PipeWire
+object id remains session-scoped.
 
 `transport` values: `builtin`, `pci`, `usb`, `firewire`, `bluetooth`,
 `bluetoothLE`, `hdmi`, `displayport`, `airplay`, `avb`, `thunderbolt`,

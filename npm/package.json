@@ -1,7 +1,7 @@
 {
   "name": "@agora-build/audictl",
   "version": "0.1.0",
-  "description": "Manage macOS audio devices from the command line — a scriptable, agent-friendly replacement for Audio MIDI Setup.",
+  "description": "Manage macOS and Linux audio devices from a scriptable, agent-friendly CLI.",
   "bin": {
     "audictl": "bin/audictl"
   },
@@ -19,6 +19,8 @@
   },
   "keywords": [
     "macos",
+    "linux",
+    "pipewire",
     "audio",
     "coreaudio",
     "aggregate-device",
@@ -34,7 +36,8 @@
   },
   "homepage": "https://github.com/Agora-Build/audictl#readme",
   "os": [
-    "darwin"
+    "darwin",
+    "linux"
   ],
   "cpu": [
     "x64",
