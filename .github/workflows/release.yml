@@ -88,7 +88,8 @@ jobs:
         with:
           command: build
           target: ${{ matrix.target }}
-          args: "--locked --release --manifest-path linux/Cargo.toml"
+          working-directory: linux
+          args: "--locked --release"
           strip: true
 
       - name: Package binary
