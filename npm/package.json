@@ -1,7 +1,7 @@
 {
   "name": "@agora-build/audictl",
   "version": "0.1.0",
-  "description": "Manage macOS and Linux audio devices from a scriptable, agent-friendly CLI.",
+  "description": "Cross-platform audio-device control for macOS and Linux using CoreAudio, PipeWire, and ALSA.",
   "bin": {
     "audictl": "bin/audictl"
   },

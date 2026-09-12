@@ -1,10 +1,11 @@
 # audictl
 
-A scriptable audio-device control tool for macOS and Linux, built for humans
-at a terminal and for AI agents driving it as a tool. Commands are composable
-and return stable JSON when requested.
+A cross-platform audio-device control CLI for macOS and Linux, built for
+humans at a terminal and for AI agents driving it as a tool. Audictl uses
+CoreAudio on macOS and PipeWire/ALSA on Linux, with stable JSON output for
+scripts and agents.
 
-On macOS, audictl replaces the audio-device half of **Audio MIDI Setup**:
+On **macOS**, audictl replaces the audio-device half of **Audio MIDI Setup**:
 
 - list / inspect devices, switch default input/output/system device
 - volume and mute, per-device and per-channel
@@ -13,9 +14,12 @@ On macOS, audictl replaces the audio-device half of **Audio MIDI Setup**:
   pick the clock device, toggle per-sub-device drift compensation
 - multi-output devices with Audio-MIDI-Setup-style drift defaults
 
-On Linux, audictl manages PipeWire devices and routing, discovers ALSA virtual
-drivers even while they are hidden from PipeWire, installs `snd_aloop`, and
-creates persistent multi-output sinks.
+On **Linux**, audictl provides native audio-session and virtual-device tools:
+
+- list / inspect PipeWire devices and switch default input/output devices
+- create persistent multi-output sinks
+- discover ALSA virtual drivers even while they are hidden from PipeWire
+- install `snd_aloop` and expose or hide its safe PipeWire endpoints
 
 macOS requires macOS 13+. Linux requires PipeWire, `pipewire-pulse`,
 WirePlumber, and systemd user services. Native PulseAudio is detected and
@@ -45,16 +49,29 @@ cp linux/target/release/audictl ~/.local/bin/
 
 ## Usage
 
+### Cross-platform commands
+
 ```sh
 audictl list                          # table of all devices
+audictl list --input                  # only devices with input channels
+audictl info scarlett                 # fuzzy name matching everywhere
+audictl default get output
+audictl default set output "Built-in Audio"
+audictl multi create --name "Everywhere" --devices "speakers,office hdmi"
+audictl multi destroy "Everywhere"
+```
+
+Devices are addressed by UID, numeric ID, exact name, or unique name
+substring — see `SCHEMA.md` for resolution order and the `--by-uid` /
+`--by-id` / `--by-name` overrides.
+
+### macOS controls and aggregate devices
+
+```sh
 audictl list --aggregate              # aggregates with members inline:
                                       #   58  Aggregate Device  18  18 ...
                                       #         └ BlackHole 2ch [clock]
                                       #         └ BlackHole 16ch drift
-audictl list --input                  # only devices with input channels
-audictl info scarlett                 # fuzzy name matching everywhere
-audictl default get output
-audictl default set output "MacBook Pro Speakers"
 
 audictl volume set speakers 40        # 0-100 percent (or 0.0-1.0 with a decimal point)
 audictl mute toggle minifuse --scope input
@@ -71,13 +88,7 @@ audictl aggregate set-clock "Studio Rig" "BlackHole 2ch"
 audictl aggregate drift "Studio Rig" "BlackHole 16ch" off
 audictl aggregate remove "Studio Rig" "BlackHole 16ch"
 audictl aggregate destroy "Studio Rig"
-
-audictl multi create --name "Everywhere" --devices "speakers,office hdmi"
 ```
-
-Devices are addressed by UID, numeric ID, exact name, or unique name
-substring — see `SCHEMA.md` for resolution order and the `--by-uid` /
-`--by-id` / `--by-name` overrides.
 
 ### Aggregates and multi-output devices
 

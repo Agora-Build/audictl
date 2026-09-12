@@ -15,9 +15,10 @@ Current `schemaVersion`: **1**
   pin the current encoding; a diff there without a version bump is a bug.
 - Keys are camelCase.
 - **Device UIDs are the durable handle** — stable across reboots and replugs.
-  Numeric `id` values (AudioObjectIDs) are session-scoped and can change any
-  time (notably: editing an aggregate's composition re-publishes it under a new
-  id). Store UIDs, never ids.
+  Numeric `id` values are backend- and session-scoped: CoreAudio
+  AudioObjectIDs on macOS and PipeWire object IDs on Linux. They can change at
+  any time (notably, editing a macOS aggregate's composition re-publishes it
+  under a new id). Store UIDs, never ids.
 
 ## Envelopes
 
@@ -70,7 +71,7 @@ Error:
 
 Every `<device>` argument accepts one string, resolved in this order:
 
-1. all-digits → session-scoped AudioObjectID (if a device with that id exists)
+1. all-digits → session-scoped backend ID (if a device with that id exists)
 2. exact UID (case-sensitive)
 3. exact name (case-insensitive)
 4. unique case-insensitive substring of a name
