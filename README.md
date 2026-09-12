@@ -28,9 +28,9 @@ reported as unsupported for virtual-device management.
 ## Install
 
 ```sh
-curl -fsSL https://dl.agora.build/audictl/install.sh | bash
-# or:
 npm install -g @agora-build/audictl
+# or:
+curl -fsSL https://dl.agora.build/audictl/install.sh | bash
 ```
 
 Or build from source on macOS:
