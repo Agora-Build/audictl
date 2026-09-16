@@ -100,6 +100,8 @@ absent rather than null):
 - `aggregate destroy`, `multi destroy` → `{ "uid": "...", "existed": true }`
 - `virtual list` → `{ "devices": [VirtualDevice] }`
 - `virtual install/show/hide` → `{ "device": VirtualDevice, "adoptedExistingDriver": true }`
+- `card list` → `{ "cards": [Card] }`
+- `card show/hide` → `{ "card": Card }`
 
 `VirtualDevice` is Linux-only. It describes the ALSA card even when no
 corresponding endpoint is visible to PipeWire:
@@ -121,6 +123,34 @@ corresponding endpoint is visible to PipeWire:
 `pipewireVisibility` is `hidden`, `exposed`, or `partial`. `partial` indicates
 that only one direction is present and should be repaired by `virtual show`
 or removed by `virtual hide`.
+
+`Card` is Linux-only. It describes a whole sound card as PipeWire sees it,
+including cards whose profile is `off` (hidden). The PipeWire card name is the
+durable `uid`; in addition to the standard device addressing, a `card`
+argument also matches the ALSA card ID (`alsaId`) exactly:
+
+```json
+{
+  "id": 48,
+  "uid": "alsa_card.usb-BurrBrown_from_Texas_Instruments_USB_AUDIO_CODEC-00",
+  "name": "PCM2900C Audio CODEC",
+  "manufacturer": "Texas Instruments",
+  "transport": "usb",
+  "alsaCard": 0,
+  "alsaId": "CODEC",
+  "activeProfile": "off",
+  "profiles": [
+    { "name": "output:analog-stereo+input:analog-stereo",
+      "description": "Analog Stereo Duplex", "priority": 6565, "available": true }
+  ],
+  "pipewireVisibility": "hidden"
+}
+```
+
+`card hide` switches the card's profile to `off` (PipeWire closes the ALSA
+device); `card show` restores the profile active before the hide, falling
+back to the highest-priority available profile. For cards
+`pipewireVisibility` is only ever `hidden` or `exposed`.
 
 `DeviceInfo`:
 

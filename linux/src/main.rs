@@ -4,7 +4,7 @@ use serde::Serialize;
 use audictl_linux::backend::Backend;
 use audictl_linux::device::{self, DeviceInfo, DeviceKind, DeviceList, SelectorMode};
 use audictl_linux::error::Result;
-use audictl_linux::{multi, output, virtual_audio};
+use audictl_linux::{card, multi, output, virtual_audio};
 
 const VERSION: &str = match option_env!("AUDICTL_VERSION") {
     Some(version) => version,
@@ -59,6 +59,11 @@ enum Command {
     Virtual {
         #[command(subcommand)]
         command: VirtualCommand,
+    },
+    /// Hide whole sound cards from PipeWire, or expose them again.
+    Card {
+        #[command(subcommand)]
+        command: CardCommand,
     },
     /// Create and destroy mirrored multi-output devices.
     Multi {
@@ -151,6 +156,16 @@ enum VirtualCommand {
     /// Expose safe input/output endpoints to PipeWire.
     Show { device: String },
     /// Hide managed endpoints from PipeWire while keeping ALSA available.
+    Hide { device: String },
+}
+
+#[derive(Subcommand)]
+enum CardCommand {
+    /// List sound cards known to PipeWire, including hidden ones.
+    List,
+    /// Restore a hidden card's PipeWire profile, re-exposing its endpoints.
+    Show { device: String },
+    /// Turn a card's PipeWire profile off so ALSA clients get direct access.
     Hide { device: String },
 }
 
@@ -328,6 +343,40 @@ fn execute(cli: Cli) -> Result<()> {
                 );
             }
         },
+        Command::Card { command } => match command {
+            CardCommand::List => {
+                let cards = card::list(&backend)?;
+                emit(
+                    cli.json,
+                    cli.quiet,
+                    &card::CardList {
+                        cards: cards.clone(),
+                    },
+                    None,
+                    card::human_list(&cards),
+                );
+            }
+            CardCommand::Show { device } => {
+                let (mutation, changed) = card::show(&backend, &device)?;
+                emit(
+                    cli.json,
+                    cli.quiet,
+                    &mutation,
+                    Some(changed),
+                    card::human_mutation(&mutation),
+                );
+            }
+            CardCommand::Hide { device } => {
+                let (mutation, changed) = card::hide(&backend, &device)?;
+                emit(
+                    cli.json,
+                    cli.quiet,
+                    &mutation,
+                    Some(changed),
+                    card::human_mutation(&mutation),
+                );
+            }
+        },
         Command::Multi { command } => match command {
             MultiCommand::Create {
                 name,
@@ -398,6 +447,9 @@ mod tests {
         ]));
         assert!(parses(&["virtual", "show", "AudictlBridge"]));
         assert!(parses(&["virtual", "hide", "AudictlBridge"]));
+        assert!(parses(&["card", "list", "--json"]));
+        assert!(parses(&["card", "hide", "CODEC"]));
+        assert!(parses(&["card", "show", "CODEC"]));
         assert!(parses(&[
             "multi",
             "create",

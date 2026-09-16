@@ -36,6 +36,11 @@ ALSA loopback claims require a real Linux audio-session run.
   `AudictlBridge`.
 - `virtual hide` unloads only PipeWire ALSA modules targeting the selected
   card's device 1. It never unloads `snd_aloop`, so direct ALSA access remains.
+- `card hide` releases a whole physical card from PipeWire by setting its
+  card profile to `off` via pactl — never by editing WirePlumber config or
+  unloading modules. WirePlumber remembers the profile across reboots.
+  `card show` restores the pre-hide profile recorded in
+  `~/.config/audictl/cards/`.
 - `multi create` is a CoreAudio multi-output device on macOS and a PipeWire
   combined sink on Linux. Do not implement it using ALSA's `multi` plugin.
 - NixOS system configuration is declarative. Print a configuration snippet;

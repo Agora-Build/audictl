@@ -20,6 +20,7 @@ On **Linux**, audictl provides native audio-session and virtual-device tools:
 - create persistent multi-output sinks
 - discover ALSA virtual drivers even while they are hidden from PipeWire
 - install `snd_aloop` and expose or hide its safe PipeWire endpoints
+- hide whole sound cards from PipeWire for exclusive direct ALSA access
 
 macOS requires macOS 13+. Linux requires PipeWire, `pipewire-pulse`,
 WirePlumber, systemd user services, and the `pactl` client. Install `pactl`
@@ -151,6 +152,29 @@ WirePlumber is PipeWire's session manager, not a competing audio pipeline.
 `pipewire-pulse` lets applications such as Chromium use these PipeWire
 endpoints through the PulseAudio API.
 
+### Linux sound-card control
+
+When a tool needs to open hardware directly (`plughw:...`) it collides with
+PipeWire, which holds the device whenever anything touches its sink or
+source — the classic intermittent `snd_pcm_open error: Device or resource
+busy`. `card hide` releases the whole card by switching its PipeWire profile
+to `off`; `card show` restores the profile that was active before:
+
+```sh
+audictl card list           # all cards, including hidden ones
+audictl card hide CODEC     # PipeWire releases the card; plughw:CODEC,0 is free
+audictl card show CODEC     # restore the previous profile and endpoints
+```
+
+Cards are addressed like devices (numeric id, UID, name, name substring) and
+additionally by their ALSA card ID (`CODEC` above). Hiding is remembered by
+WirePlumber across reboots, and PipeWire defaults fall back to the next
+available card. While hidden, desktop volume controls (`wpctl`, applets) no
+longer see the card — use `amixer`/`alsamixer` from `alsa-utils` instead.
+This is a runtime change and works on NixOS without a rebuild; make it
+declarative instead with a WirePlumber `monitor.alsa.rules` entry setting
+`device.disabled = true` if you never want PipeWire to touch the card.
+
 ### Platform command support
 
 | Command family | macOS | Linux |
@@ -158,6 +182,7 @@ endpoints through the PulseAudio API.
 | `list`, `info`, `default` | CoreAudio | PipeWire |
 | `multi create/destroy` | CoreAudio multi-output | PipeWire combined sink |
 | `virtual` | - | ALSA + PipeWire |
+| `card` | - | PipeWire card profiles |
 | `volume`, `mute`, `rate` | CoreAudio | Planned |
 | `aggregate` | CoreAudio | Not needed; use PipeWire routing |
 
