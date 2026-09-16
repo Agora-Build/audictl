@@ -22,8 +22,17 @@ On **Linux**, audictl provides native audio-session and virtual-device tools:
 - install `snd_aloop` and expose or hide its safe PipeWire endpoints
 
 macOS requires macOS 13+. Linux requires PipeWire, `pipewire-pulse`,
-WirePlumber, and systemd user services. Native PulseAudio is detected and
-reported as unsupported for virtual-device management.
+WirePlumber, systemd user services, and the `pactl` client. Install `pactl`
+with `pkgs.pulseaudio` on NixOS, `pulseaudio-utils` on Debian/Ubuntu, or
+`libpulse` on Arch. Only the client tools are needed; the PulseAudio daemon
+stays unused under PipeWire. Native PulseAudio is detected and reported as
+unsupported for virtual-device management.
+
+On NixOS, a one-off command can run without a system rebuild:
+
+```sh
+nix-shell -p pulseaudio --run 'audictl list'
+```
 
 ## Install
 
@@ -168,6 +177,8 @@ The contract (`SCHEMA.md`):
 - Mutating commands return the resulting state; no follow-up read needed.
 - Machine-readable errors with typed codes and structured details — an
   `AMBIGUOUS_DEVICE` error lists the candidates so a retry can pin a UID.
+- `MISSING_DEPENDENCY` identifies the missing command and includes a package
+  installation hint when Audictl knows one.
 - Exit codes distinguish not-found (2), ambiguous (3), unsupported (4),
   backend errors (5/6), and timeouts (6).
 - Device **UIDs are durable**; numeric ids are session-scoped. Store UIDs.

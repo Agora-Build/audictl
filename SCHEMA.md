@@ -63,7 +63,7 @@ Error:
 | 2 | `DEVICE_NOT_FOUND` | `details.query` |
 | 3 | `AMBIGUOUS_DEVICE` | `details.query`, `details.candidates` (retry with a UID) |
 | 4 | `UNSUPPORTED_OPERATION`, `REQUIRES_DECLARATIVE_CONFIG`, `NOT_AN_AGGREGATE`, `INVALID_SAMPLE_RATE`, `SUBDEVICE_NOT_IN_AGGREGATE` | operation impossible on this platform; declarative configuration errors carry `details.snippet` |
-| 5 | `HAL_ERROR`, `MISSING_DEPENDENCY` | CoreAudio failure, or a required Linux command is unavailable |
+| 5 | `HAL_ERROR`, `MISSING_DEPENDENCY` | CoreAudio failure, or a required Linux command is unavailable; missing dependencies carry `details.command` and may include `details.installHint` |
 | 6 | `TIMEOUT`, `BACKEND_ERROR` | an asynchronous operation timed out, or a Linux backend command failed |
 | 64 | — | usage error (bad arguments; ArgumentParser prints to stderr) |
 

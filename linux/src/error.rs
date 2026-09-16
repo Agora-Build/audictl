@@ -16,7 +16,7 @@ pub enum AudictlError {
     Unsupported(String),
     #[error("{message}")]
     RequiresDeclarativeConfig { message: String, snippet: String },
-    #[error("required command '{0}' is not installed")]
+    #[error("{}", missing_dependency_message(.0))]
     MissingDependency(String),
     #[error("{operation} failed: {message}")]
     CommandFailed { operation: String, message: String },
@@ -55,7 +55,13 @@ impl AudictlError {
                 query, candidates, ..
             } => Some(json!({ "query": query, "candidates": candidates })),
             Self::RequiresDeclarativeConfig { snippet, .. } => Some(json!({ "snippet": snippet })),
-            Self::MissingDependency(command) => Some(json!({ "command": command })),
+            Self::MissingDependency(command) => {
+                let mut details = json!({ "command": command });
+                if let Some(hint) = dependency_install_hint(command) {
+                    details["installHint"] = json!(hint);
+                }
+                Some(details)
+            }
             Self::CommandFailed { operation, .. } => Some(json!({ "operation": operation })),
             Self::Unsupported(_) | Self::Internal(_) => None,
         }
@@ -93,3 +99,54 @@ impl From<&AudictlError> for ErrorEnvelope {
 }
 
 pub type Result<T> = std::result::Result<T, AudictlError>;
+
+fn missing_dependency_message(command: &str) -> String {
+    let message = format!("required command '{command}' is not installed");
+    match dependency_install_hint(command) {
+        Some(hint) => format!("{message}. {hint}"),
+        None => message,
+    }
+}
+
+fn dependency_install_hint(command: &str) -> Option<&'static str> {
+    match command {
+        "pactl" => Some(
+            "Install the PulseAudio client tools (NixOS: add pkgs.pulseaudio to systemPackages, \
+             or use nix-shell -p pulseaudio --run 'audictl ...'; Debian/Ubuntu: pulseaudio-utils; \
+             Arch: libpulse). The PulseAudio daemon is not needed when using PipeWire.",
+        ),
+        _ => None,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn pactl_error_explains_platform_packages() {
+        let error = AudictlError::MissingDependency("pactl".to_owned());
+        let message = error.to_string();
+
+        assert!(message.contains("NixOS: add pkgs.pulseaudio"));
+        assert!(message.contains("nix-shell -p pulseaudio"));
+        assert!(message.contains("Debian/Ubuntu: pulseaudio-utils"));
+        assert!(message.contains("Arch: libpulse"));
+        assert!(message.contains("daemon is not needed"));
+
+        let details = error.details().expect("missing dependency details");
+        assert_eq!(details["command"], "pactl");
+        assert!(details["installHint"].as_str().is_some());
+    }
+
+    #[test]
+    fn unknown_dependency_keeps_generic_error() {
+        let error = AudictlError::MissingDependency("other-tool".to_owned());
+
+        assert_eq!(
+            error.to_string(),
+            "required command 'other-tool' is not installed"
+        );
+        assert!(error.details().expect("details")["installHint"].is_null());
+    }
+}
